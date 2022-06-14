@@ -1,0 +1,225 @@
+- name: This play book for creating peering connection
+  hosts: local
+  connection: local
+  gather_facts: False
+  vars_files:
+    - secret.yml
+    - variable.yml
+  tasks:
+  - name: create VPC
+    ec2_vpc_net:
+      name: "{{ vpc_name[1] }}"
+      cidr_block: "{{ vpc_cidr[1] }}"
+      region: "{{ region[1] }}"
+      state: present
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+    register: ec2_vpc_net_result
+
+  - name: create subnet to the vpc
+    ec2_vpc_subnet:
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+      vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+      region: "{{ region[1] }}"
+      cidr: "{{ subnet_cidr[1] }}"
+      state: present
+      map_public: yes
+      resource_tags:
+        Name: "{{ subnet_name[1] }}"
+    register: subnet
+                   
+  - name: create IGW
+    ec2_vpc_igw:   
+      vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+      region: "{{ region[1] }}"
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+      state: present
+      tags:        
+        Name: "{{ igw_name }}"
+    register: igw  
+
+# update the CIDR address in the SSH port section.
+ 
+  - name: Create Security Group
+    ec2_group:
+      name: "{{ securitygroup_name[1] }}"
+      description: Hawa manxe
+      vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+      region: "{{ region[1] }}"
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+      rules:
+        - proto: tcp
+          ports:
+          - 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          ports:
+          - 22
+          cidr_ip: 0.0.0.0/0
+    register: security
+   
+      # - name: create key pair using key_material obtained using 'file' lookup plugin
+    # amazon.aws.ec2_key:
+      #name: my_keypair
+        #key_material: "{{ lookup('file', '/home/ubuntu/.ssh/id_rsa.pub') }}"
+        # region: "{{ region[1] }}"
+        # state: present
+        #register: keypair  
+
+  - name: Create Ec2 instance
+    amazon.aws.ec2:
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}" 
+      image: ami-005074b2b824595f4
+      wait: yes
+      instance_type: t2.micro
+      region: "{{ region[1] }}"
+      group_id: "{{ security.group_id }}"
+      vpc_subnet_id: "{{ subnet.subnet.id }}"
+        #key_name: "{{ keypair.key.name }}"
+      instance_tags:
+        app: ansible-vm
+      assign_public_ip: yes
+      count_tag:
+        Name: "{{ ec2_tag[1] }}"
+      exact_count: 0
+    register: ec2vm  
+
+##################################################################
+
+  - name: print out new vpc, subnet id, and security group for vpc
+    # print out new subnet id and security group
+    debug:
+      msg: "To use the new created VPC: {{ ec2_vpc_net_result.vpc.id }}; Use subnet id: {{ subnet.subnet.id }} and security group: {{ security.group_id }}i ip: {{ ec2vm }}  to create your AWS instances " 
+
+#####################################################################################################
+
+  - name: create VPC
+    ec2_vpc_net:
+      name: "{{ vpc_name[0] }}"
+      cidr_block: "{{ vpc_cidr[0] }}"
+      region: "{{ region[0] }}"
+      state: present
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+    register: ec2_vpc_net_result_new
+       
+  - name: create subnet to the vpc
+    ec2_vpc_subnet:
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+      vpc_id: "{{ ec2_vpc_net_result_new.vpc.id }}"
+      region: "{{ region[0] }}"
+      cidr: "{{ subnet_cidr[0] }}"
+      state: present
+      map_public: yes
+      resource_tags:
+        Name: "{{ subnet_name[0] }}"
+    register: subnet_new
+
+# update the CIDR address in the SSH port section.
+    
+  - name: Create Security Group
+    ec2_group:
+      name: "{{ securitygroup_name[0] }}"
+      description: Hawa manxe
+      vpc_id: "{{ ec2_vpc_net_result_new.vpc.id }}"
+      region: "{{ region[0] }}"
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+      rules:
+        - proto: tcp
+          ports:
+          - 80
+          cidr_ip: 0.0.0.0/0
+        - proto: tcp
+          ports:
+          - 22
+          cidr_ip: 0.0.0.0/0
+        - proto: ICMP
+          ports:
+          - -1
+          cidr_ip: 0.0.0.0/0
+    register: security_new
+      # - name: create key pair using key_material obtained using 'file' lookup plugin
+      #amazon.aws.ec2_key:
+      #name: my_keypair_new
+      #key_material: "{{ lookup('file', '/home/ubuntu/.ssh/id_rsa.pub') }}"
+      #region: "{{ region[0] }}"
+      #state: present
+      #register: keypair_new
+    
+  - name: Create Ec2 instance 
+    amazon.aws.ec2:    
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+      image: ami-0f095f89ae15be883
+      wait: yes        
+      instance_type: t2.micro 
+      region: "{{ region[0] }}"
+      group_id: "{{ security_new.group_id }}"
+      vpc_subnet_id: "{{ subnet_new.subnet.id }}"
+        # key_name: "{{ keypair_new.key.name }}"
+      assign_public_ip: no
+      instance_tags:   
+        app: ansible-vm2
+      count_tag:       
+        Name: "{{ ec2_tag[0] }}"
+      exact_count: 0 
+    register: ec2vm2
+   # Complete example to create and accept an intra-region peering connection.
+  - name: Create intra-region VPC peering Connection
+    community.aws.ec2_vpc_peer:
+      region: "{{ region[1] }}"
+      vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+      peer_vpc_id: "{{ ec2_vpc_net_result_new.vpc.id }}"
+      peer_region: "{{ region[0] }}"
+      state: present
+    register: vpc_peer
+
+  - name: Accept peering connection from peer region
+    community.aws.ec2_vpc_peer:
+      region: "{{ region[0] }}"
+      peering_id: "{{ vpc_peer.peering_id }}"
+      state: accept
+    register: action_peer
+############# 
+  - name: Route IGW
+    ec2_vpc_route_table:
+     vpc_id: "{{ ec2_vpc_net_result_new.vpc.id }}"
+     region: "{{ region[0] }}"
+     route_table_id: "{{ route_table[1] }}"
+     aws_access_key: "{{ aws_access_key_id }}"
+     aws_secret_key: "{{ aws_secret_key_id }}"
+     subnets:                          
+       - "{{ subnet_new.subnet.id }}"      
+     routes:                           
+     - dest: 10.1.0.0/24               
+       vpc_peering_connection_id: "{{ action_peer.peering_id }}"
+     tags:                             
+       Name: gateway2                  
+#######################This route table belongs to vpc1 region 1 ################ route table name gateway1
+  - name: Route IGW
+    ec2_vpc_route_table:
+     vpc_id: "{{ ec2_vpc_net_result.vpc.id }}"
+     region: "{{ region[1] }}"
+     route_table_id: "{{ route_table[0] }}"
+     aws_access_key: "{{ aws_access_key_id }}"
+     aws_secret_key: "{{ aws_secret_key_id }}"
+     subnets:
+       - "{{ subnet.subnet.id }}"
+     routes:
+       - dest: 0.0.0.0/0
+         gateway_id: "{{ igw.gateway_id  }}"
+       - dest: 10.0.0.0/24
+         vpc_peering_connection_id: "{{ vpc_peer.peering_id }}"
+     tags:
+       Name: gateway1
+##########################################################################################
+  - name: print out new vpc, subnet id, and security group for vpc
+    # print out new subnet id and security group
+    debug:
+      msg: "To use the new created VPC: {{ ec2_vpc_net_result_new.vpc.id }}; Use subnet id: {{ subnet_new.subnet.id }} and security group: {{ security_new.group_id }} and ip address ip: {{ ec2vm2 }} and peer id peer: {{ vpc_peer.peering_id }} to create your AWS instances "

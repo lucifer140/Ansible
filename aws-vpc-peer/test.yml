@@ -1,0 +1,18 @@
+- name: This play book for creating VPC
+  hosts: local
+  connection: local
+  gather_facts: True
+  vars_files:
+    - secret.yml
+    - variable.yml
+  tasks:
+  - name: create VPC
+    ec2_vpc_net:
+      name: "{{ vpc_name[1] }}"
+      cidr_block: "{{ vpc_cidr[1] }}"
+      region: "{{ region[1] }}"
+      state: present
+      aws_access_key: "{{ aws_access_key_id }}"
+      aws_secret_key: "{{ aws_secret_key_id }}"
+    register: ec2_vpc_net_result
+

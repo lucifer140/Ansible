@@ -1,0 +1,34 @@
+region:
+  - us-east-1
+  - ap-southeast-2
+# VPC
+vpc_cidr: 
+ - 10.0.0.0/24
+ - 10.1.0.0/24
+vpc_name:
+ - "Ansible VPC"
+ - "Ansible VPC 2"
+# Subnet
+subnet_name: 
+  - "private subnet"
+  - "public ansible subnet"
+subnet_cidr:
+ - 10.0.0.0/26
+ - 10.1.0.0/26
+# Internet Gateway Name
+igw_name: "Traffic IGW"
+ 
+securitygroup_name: 
+ - "Ansible Security Group1"
+ - "Ansible Security  Group2"
+ 
+ec2_tag: 
+ - "WebServer-rohan"
+ - "requester-rohan"
+#The local path to which we would save our EC2 Private Key
+#ec2_key_directory: "/home/ubuntu/.ssh/"
+#keypair_name: "authorized_keys"
+
+   #route_table:
+   # - bipin
+   # - pandey
