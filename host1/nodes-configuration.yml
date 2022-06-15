@@ -1,0 +1,25 @@
+- name: play-1
+  hosts: nginx
+  tasks:
+  - name: install nginx
+    apt:
+         name: nginx
+         state: present
+  - name: start nginx
+    service:
+         name: nginx.service
+         state: started
+         enabled: yes
+- name: play-2  
+  hosts: apache2
+  tasks:
+  - name: install nginx
+    apt:
+         name: nginx
+         state: present
+  - name: start nginx
+    service:
+         name: nginx.service
+         state: started
+         enabled: yes
+
